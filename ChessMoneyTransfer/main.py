@@ -2,6 +2,8 @@ from ChessMoneyTransfer.app import app, socketio
 import logging
 from ChessMoneyTransfer.app import app  # app.py를 임포트
 
+app = create_app()
+
 if __name__ == "__main__":
     app.run(debug=True)
 
