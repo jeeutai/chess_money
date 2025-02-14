@@ -1,6 +1,5 @@
 import eventlet
 eventlet.monkey_patch()
-from app import db
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
