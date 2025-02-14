@@ -6,7 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_socketio import SocketIO
 import logging
-import models
+from ChessMoneyTransfer.models import models
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
