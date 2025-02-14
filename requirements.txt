@@ -6,3 +6,4 @@ SQLAlchemy
 eventlet
 Flask
 Flask-SQLAlchemy
+flask_login
