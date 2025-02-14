@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- 전체 랭킹 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">전체 랭킹</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>순위</th>
+                                    <th>사용자</th>
+                                    <th>포인트</th>
+                                    <th>ELO</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr class="{% if user.id == current_user.id %}table-success{% endif %}">
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <span style="color: {{ user.profile_color }}">{{ user.profile_piece }} {{ user.username }}</span>
+                                    </td>
+                                    <td>{{ user.points }}P</td>
+                                    <td>{{ user.elo_rating }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 주간 랭킹 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">주간 랭킹</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>순위</th>
+                                    <th>사용자</th>
+                                    <th>주간 포인트</th>
+                                    <th>ELO</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user, points in weekly_users %}
+                                <tr class="{% if user.id == current_user.id %}table-success{% endif %}">
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <span style="color: {{ user.profile_color }}">{{ user.profile_piece }} {{ user.username }}</span>
+                                    </td>
+                                    <td>{{ points }}P</td>
+                                    <td>{{ user.elo_rating }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 월간 랭킹 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">월간 랭킹</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>순위</th>
+                                    <th>사용자</th>
+                                    <th>월간 포인트</th>
+                                    <th>ELO</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user, points in monthly_users %}
+                                <tr class="{% if user.id == current_user.id %}table-success{% endif %}">
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <span style="color: {{ user.profile_color }}">{{ user.profile_piece }} {{ user.username }}</span>
+                                    </td>
+                                    <td>{{ points }}P</td>
+                                    <td>{{ user.elo_rating }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 포인트 변동 애니메이션을 위한 CSS -->
+<style>
+@keyframes moveChessPiece {
+    0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(var(--move-x), var(--move-y)) scale(1.5);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translate(var(--final-x), var(--final-y)) scale(1);
+        opacity: 0;
+    }
+}
+
+.chess-piece-animation {
+    position: fixed;
+    font-size: 2em;
+    pointer-events: none;
+    animation: moveChessPiece 1s ease-in-out forwards;
+    z-index: 9999;
+}
+</style>
+
+<!-- 포인트 변동 애니메이션을 위한 JavaScript -->
+<script>
+function showPointAnimation(amount, startX, startY) {
+    const piece = '{{ current_user.profile_piece }}';
+    const color = '{{ current_user.profile_color }}';
+
+    const element = document.createElement('div');
+    element.className = 'chess-piece-animation';
+    element.style.color = color;
+    element.style.left = startX + 'px';
+    element.style.top = startY + 'px';
+    element.textContent = piece;
+
+    // Calculate random end position
+    const moveX = (Math.random() - 0.5) * 200;
+    const moveY = -100 - Math.random() * 100;
+    element.style.setProperty('--move-x', `${moveX}px`);
+    element.style.setProperty('--move-y', `${moveY}px`);
+    element.style.setProperty('--final-x', `${moveX}px`);
+    element.style.setProperty('--final-y', `${moveY * 2}px`);
+
+    document.body.appendChild(element);
+
+    // Remove element after animation
+    setTimeout(() => {
+        element.remove();
+    }, 1000);
+}
+
+// Listen for point change events
+document.addEventListener('pointsChanged', function(e) {
+    const amount = e.detail.amount;
+    showPointAnimation(amount, e.detail.x, e.detail.y);
+});
+</script>
+{% endblock %}

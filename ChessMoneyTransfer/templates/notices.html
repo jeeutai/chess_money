@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">공지사항</h4>
+            {% if current_user.is_admin %}
+            <div>
+                <a href="{{ url_for('create_notice') }}" class="btn btn-light">공지사항 작성</a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <!-- 중요 공지사항 -->
+            {% for notice in important_notices %}
+            <div class="alert alert-warning">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <span class="badge bg-danger me-2">중요</span>
+                        <a href="{{ url_for('view_notice', notice_id=notice.id) }}" class="text-dark text-decoration-none">
+                            {{ notice.title }}
+                        </a>
+                    </h5>
+                    <small class="text-muted">{{ notice.created_at.strftime('%Y-%m-%d') }}</small>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- 일반 공지사항 -->
+            <div class="list-group">
+                {% for notice in regular_notices %}
+                <a href="{{ url_for('view_notice', notice_id=notice.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ notice.title }}</h5>
+                        <small class="text-muted">{{ notice.created_at.strftime('%Y-%m-%d') }}</small>
+                    </div>
+                    <small class="text-muted">작성자: {{ notice.author.username }}</small>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

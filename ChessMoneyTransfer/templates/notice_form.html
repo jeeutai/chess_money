@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0">{{ '공지사항 수정' if notice else '새 공지사항 작성' }}</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="title" class="form-label">제목</label>
+                    <input type="text" class="form-control" id="title" name="title" required
+                           value="{{ notice.title if notice else '' }}">
+                </div>
+                <div class="mb-3">
+                    <label for="content" class="form-label">내용</label>
+                    <textarea class="form-control" id="content" name="content" rows="10" required>{{ notice.content if notice else '' }}</textarea>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="is_important" name="is_important"
+                           {% if notice and notice.is_important %}checked{% endif %}>
+                    <label class="form-check-label" for="is_important">중요 공지로 설정</label>
+                </div>
+                <button type="submit" class="btn btn-success">저장</button>
+                <a href="{{ url_for('notices') }}" class="btn btn-secondary">취소</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

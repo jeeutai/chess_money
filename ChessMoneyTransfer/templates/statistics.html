@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">통계 대시보드</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <canvas id="transactionTypeChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">총 거래 건수</h5>
+                                    <p class="display-4">{{ total_transactions }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">총 거래 금액</h5>
+                                    <p class="display-4">{{ total_amount }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// 월별 거래량 차트
+const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+new Chart(monthlyCtx, {
+    type: 'line',
+    data: {
+        labels: {{ monthly_labels | tojson }},
+        datasets: [{
+            label: '월별 거래량',
+            data: {{ monthly_data | tojson }},
+            borderColor: '#4CAF50',
+            tension: 0.1
+        }]
+    }
+});
+
+// 거래 유형별 차트
+const typeCtx = document.getElementById('transactionTypeChart').getContext('2d');
+new Chart(typeCtx, {
+    type: 'pie',
+    data: {
+        labels: {{ type_labels | tojson }},
+        datasets: [{
+            data: {{ type_data | tojson }},
+            backgroundColor: ['#4CAF50', '#FFC107', '#F44336']
+        }]
+    }
+});
+</script>
+{% endblock %}

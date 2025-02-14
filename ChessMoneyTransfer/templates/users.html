@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    {% if not current_user.is_admin %}
+    <div class="alert alert-danger">
+        접근 권한이 없습니다. 관리자 권한이 필요합니다.
+    </div>
+    {% else %}
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">회원 관리</h4>
+            <div>
+                <button type="button" class="btn btn-light me-2" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    회원 추가
+                </button>
+                <button type="button" class="btn btn-light me-2" data-bs-toggle="modal" data-bs-target="#monthlyPayModal">
+                    월급 지급
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>아이디</th>
+                            <th>계정 유형</th>
+                            <th>잔액</th>
+                            <th>가입일</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ '관리자' if user.is_admin else '일반 회원' }}</td>
+                            <td>{{ user.balance }}</td>
+                            <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if not user.is_admin %}
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-warning btn-sm" onclick="fillBalanceForm('{{ user.username }}')">잔액 수정</button>
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="fillFineForm('{{ user.username }}')">벌금 부과</button>
+                                    <form method="POST" action="{{ url_for('admin_remove_user') }}" class="d-inline">
+                                        <input type="hidden" name="username" value="{{ user.username }}">
+                                        <button type="submit" class="btn btn-danger btn-sm">회원 탈퇴</button>
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">회원 추가</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('admin_add_user') }}">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" name="username" placeholder="아이디" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" class="form-control" name="password" placeholder="비밀번호" required>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin">
+                        <label class="form-check-label" for="is_admin">관리자 권한 부여</label>
+                    </div>
+                    <button type="submit" class="btn btn-success">회원 추가</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Pay Modal -->
+<div class="modal fade" id="monthlyPayModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">월급 지급</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('admin_monthly_pay') }}">
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">지급할 금액</label>
+                        <input type="number" class="form-control" id="amount" name="amount" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">전체 회원에게 지급</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Balance Modification Modal -->
+<div class="modal fade" id="balanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">잔액 수정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('admin_modify_balance') }}">
+                    <input type="hidden" name="username" id="balanceUsername">
+                    <div class="mb-3">
+                        <label for="balance" class="form-label">새로운 잔액</label>
+                        <input type="number" class="form-control" id="balance" name="balance" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning">잔액 수정</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fine Application Modal -->
+<div class="modal fade" id="fineModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">벌금 부과</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('admin_apply_fine') }}">
+                    <input type="hidden" name="username" id="fineUsername">
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">벌금액</label>
+                        <input type="number" class="form-control" id="fineAmount" name="amount" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger">벌금 부과</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function fillBalanceForm(username) {
+    document.getElementById('balanceUsername').value = username;
+    new bootstrap.Modal(document.getElementById('balanceModal')).show();
+}
+
+function fillFineForm(username) {
+    document.getElementById('fineUsername').value = username;
+    new bootstrap.Modal(document.getElementById('fineModal')).show();
+}
+</script>
+{% endblock %}

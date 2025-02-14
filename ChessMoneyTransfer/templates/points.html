@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- Points Overview Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">포인트 현황</h4>
+                </div>
+                <div class="card-body">
+                    <h2 class="display-4 mb-4">{{ current_user.points }} P</h2>
+                    <p class="text-muted">100 포인트 = 1 체스머니</p>
+
+                    <!-- Daily Attendance Check -->
+                    <form method="POST" action="{{ url_for('attendance_check') }}" class="mb-4">
+                        <button type="submit" class="btn btn-success mb-3" 
+                                {% if not current_user.can_attendance_check() %}disabled{% endif %}>
+                            {{ '출석체크 하기 (+20P)' if current_user.can_attendance_check() else '이미 출석체크를 완료했습니다' }}
+                        </button>
+                        {% if current_user.attendance_streak > 0 %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-calendar-check"></i> 연속 출석 {{ current_user.attendance_streak }}일차
+                            (다음 출석 시 {{ min(current_user.attendance_streak * 100 + 100, 1000) }}P 보너스)
+                        </div>
+                        {% endif %}
+                    </form>
+
+                    <!-- Points to Money Conversion Form -->
+                    <form method="POST" action="{{ url_for('convert_points') }}" class="mt-4">
+                        <div class="mb-3">
+                            <label for="points" class="form-label">전환할 포인트</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="points" name="points" 
+                                       min="100" step="100" max="{{ current_user.points }}" required>
+                                <span class="input-group-text">P</span>
+                            </div>
+                            <div class="form-text">최소 100포인트부터 전환 가능합니다.</div>
+                        </div>
+                        <button type="submit" class="btn btn-success" onclick="triggerPointAnimation(-document.getElementById('points').value)">체스머니로 전환</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daily Missions Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">일일 미션</h4>
+                </div>
+                <div class="card-body">
+                    {% for mission in daily_missions %}
+                    <div class="mission-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if mission.mission_type == 'chat' %}
+                                <h5>채팅 참여</h5>
+                                <p class="text-muted">채팅 {{ mission.current_count }}/{{ mission.target_count }}회 
+                                    (보상: {{ mission.reward_points }}P)</p>
+                                {% elif mission.mission_type == 'attendance' %}
+                                <h5>출석체크</h5>
+                                <p class="text-muted">출석체크 {{ mission.current_count }}/{{ mission.target_count }}회
+                                    (보상: {{ mission.reward_points }}P)</p>
+                                {% endif %}
+                            </div>
+                            {% if mission.completed %}
+                            <span class="badge bg-success">완료!</span>
+                            {% else %}
+                            <div class="progress" style="width: 100px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ (mission.current_count / mission.target_count * 100)|round }}%">
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Ranking Rewards Info -->
+                    <div class="mt-4">
+                        <h5>랭킹 보상</h5>
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                주간 랭킹 1위
+                                <span class="badge bg-success">10,000 P</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                월간 랭킹 1위
+                                <span class="badge bg-success">50,000 P</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Points History -->
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0">포인트 내역</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>활동</th>
+                            <th>포인트</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for point in points %}
+                        <tr>
+                            <td>{{ point.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if point.action == 'login' %}
+                                로그인
+                                {% elif point.action == 'chat' %}
+                                채팅 참여
+                                {% elif point.action == 'convert' %}
+                                체스머니 전환
+                                {% elif point.action == 'attendance' %}
+                                출석체크
+                                {% elif point.action == 'mission_chat' %}
+                                채팅 미션 완료
+                                {% elif point.action == 'mission_attendance' %}
+                                출석 미션 완료
+                                {% elif point.action == 'weekly_ranking_reward' %}
+                                주간 랭킹 1위 보상
+                                {% elif point.action == 'monthly_ranking_reward' %}
+                                월간 랭킹 1위 보상
+                                {% endif %}
+                            </td>
+                            <td class="{{ 'text-success' if point.amount > 0 else 'text-danger' }}">
+                                {{ '+' if point.amount > 0 else '' }}{{ point.amount }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 포인트 변동 애니메이션을 위한 CSS -->
+<style>
+@keyframes moveChessPiece {
+    0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(var(--move-x), var(--move-y)) scale(1.5);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translate(var(--final-x), var(--final-y)) scale(1);
+        opacity: 0;
+    }
+}
+
+.chess-piece-animation {
+    position: fixed;
+    font-size: 2em;
+    pointer-events: none;
+    animation: moveChessPiece 1s ease-in-out forwards;
+    z-index: 9999;
+}
+</style>
+
+<!-- 포인트 변동 애니메이션을 위한 JavaScript -->
+<script>
+function showPointAnimation(amount, startX, startY) {
+    const piece = '{{ current_user.profile_piece }}';
+    const color = '{{ current_user.profile_color }}';
+
+    const element = document.createElement('div');
+    element.className = 'chess-piece-animation';
+    element.style.color = color;
+    element.style.left = startX + 'px';
+    element.style.top = startY + 'px';
+    element.textContent = piece;
+
+    // Calculate random end position
+    const moveX = (Math.random() - 0.5) * 200;
+    const moveY = amount > 0 ? -100 - Math.random() * 100 : 100 + Math.random() * 100;
+    element.style.setProperty('--move-x', `${moveX}px`);
+    element.style.setProperty('--move-y', `${moveY}px`);
+    element.style.setProperty('--final-x', `${moveX}px`);
+    element.style.setProperty('--final-y', `${moveY * 2}px`);
+
+    document.body.appendChild(element);
+
+    // Remove element after animation
+    setTimeout(() => {
+        element.remove();
+    }, 1000);
+}
+
+function triggerPointAnimation(amount) {
+    // Create a custom event for point changes
+    const event = new CustomEvent('pointsChanged', {
+        detail: {
+            amount: amount,
+            x: event.clientX || window.innerWidth / 2,
+            y: event.clientY || window.innerHeight / 2
+        }
+    });
+    document.dispatchEvent(event);
+}
+
+// Listen for point change events
+document.addEventListener('pointsChanged', function(e) {
+    showPointAnimation(e.detail.amount, e.detail.x, e.detail.y);
+});
+
+// Add event listeners to forms
+document.querySelector('form[action*="attendance_check"]').addEventListener('submit', function(e) {
+    const streakBonus = {{ current_user.attendance_streak * 100 if current_user.attendance_streak else 0 }};
+    const totalPoints = 20 + Math.min(streakBonus + 100, 1000);
+    triggerPointAnimation(totalPoints);
+});
+
+document.querySelector('form[action*="convert_points"]').addEventListener('submit', function(e) {
+    const points = parseInt(document.getElementById('points').value);
+    if (!isNaN(points)) {
+        triggerPointAnimation(-points);
+    }
+});
+</script>
+{% endblock %}

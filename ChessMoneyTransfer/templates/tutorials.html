@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-graduation-cap"></i> 체스 튜토리얼</h4>
+                    {% if current_user.is_admin %}
+                    <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#generateTutorialModal">
+                        <i class="fas fa-plus"></i> 새 튜토리얼 생성
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <!-- 필터 버튼 그룹 -->
+                    <div class="btn-group mb-4" role="group">
+                        <button type="button" class="btn btn-outline-success active" data-filter="all">전체</button>
+                        <button type="button" class="btn btn-outline-success" data-filter="opening">오프닝</button>
+                        <button type="button" class="btn btn-outline-success" data-filter="middlegame">미들게임</button>
+                        <button type="button" class="btn btn-outline-success" data-filter="endgame">엔드게임</button>
+                    </div>
+
+                    <div class="row">
+                        {% for tutorial in tutorials %}
+                        <div class="col-md-4 mb-4 tutorial-card" data-category="{{ tutorial.category }}">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-header">
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-chess"></i> {{ tutorial.category }}
+                                    </span>
+                                    <span class="badge {% if tutorial.difficulty == 'beginner' %}bg-info{% elif tutorial.difficulty == 'intermediate' %}bg-warning{% else %}bg-danger{% endif %}">
+                                        <i class="fas fa-signal"></i> {{ tutorial.difficulty }}
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ tutorial.title }}</h5>
+                                    <p class="card-text">{{ tutorial.content[:100] }}...</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-eye"></i> {{ tutorial.views }}
+                                        </small>
+                                        <a href="{{ url_for('tutorial', tutorial_id=tutorial.id) }}" class="btn btn-success">
+                                            <i class="fas fa-book-reader"></i> 학습하기
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_admin %}
+<!-- Tutorial Generation Modal -->
+<div class="modal fade" id="generateTutorialModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-plus-circle"></i> 새 튜토리얼 생성</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin_generate_tutorial') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="category" class="form-label">카테고리</label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="opening">오프닝</option>
+                            <option value="middlegame">미들게임</option>
+                            <option value="endgame">엔드게임</option>
+                            <option value="tactics">전술</option>
+                            <option value="strategy">전략</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="difficulty" class="form-label">난이도</label>
+                        <select class="form-select" id="difficulty" name="difficulty" required>
+                            <option value="beginner">초급</option>
+                            <option value="intermediate">중급</option>
+                            <option value="advanced">고급</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> 취소
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> 생성
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Filter JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterButtons = document.querySelectorAll('[data-filter]');
+    const tutorialCards = document.querySelectorAll('.tutorial-card');
+
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const filter = this.dataset.filter;
+
+            // Toggle active state of buttons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Filter cards
+            tutorialCards.forEach(card => {
+                if (filter === 'all' || card.dataset.category === filter) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

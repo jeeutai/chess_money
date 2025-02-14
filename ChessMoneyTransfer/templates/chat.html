@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- 공지사항 영역 -->
+        {% if pinned_notices %}
+        <div class="col-12 mb-3">
+            {% for notice in pinned_notices %}
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <strong>{{ notice.title }}</strong>
+                <p class="mb-0">{{ notice.content }}</p>
+                {% if current_user.is_admin %}
+                <form action="{{ url_for('delete_notice', notice_id=notice.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn-close"></button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- 투표 영역 -->
+        {% if active_polls %}
+        <div class="col-12 mb-3">
+            {% for poll in active_polls %}
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ poll.question }}</h5>
+                    {% if poll.ends_at %}
+                    <small>종료 시간: {{ poll.ends_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <form onsubmit="votePoll(event, {{ poll.id }})">
+                        {% for option in poll.options %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="{{ 'checkbox' if poll.is_multiple else 'radio' }}"
+                                   name="poll_option" id="option_{{ option.id }}" value="{{ option.id }}">
+                            <label class="form-check-label" for="option_{{ option.id }}">
+                                {{ option.content }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn btn-primary">투표하기</button>
+                        {% if current_user.is_admin %}
+                        <button type="button" class="btn btn-danger float-end" 
+                                onclick="deletePoll({{ poll.id }})">삭제</button>
+                        {% endif %}
+                    </form>
+                    <div id="poll_results_{{ poll.id }}" class="mt-3">
+                        <!-- 투표 결과가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- 채팅 메시지 영역 -->
+        <div class="col-md-9 px-0">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <h4 class="mb-0">체스제국 단체 채팅방</h4>
+                        <span class="badge bg-light text-dark ms-2">{{ active_users|length }} 명</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <!-- 검색 버튼 -->
+                        <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#searchModal">
+                            <i class="bi bi-search"></i> 검색
+                        </button>
+                        {% if current_user.is_admin %}
+                        <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#roomSettingsModal">
+                            <i class="bi bi-gear"></i> 방 설정
+                        </button>
+                        <button class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#statisticsModal">
+                            <i class="bi bi-graph-up"></i> 통계
+                        </button>
+                        {% endif %}
+                        <a href="{{ url_for('users' if current_user.is_admin else 'dashboard') }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-box-arrow-right"></i> 나가기
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body chat-container" style="height: calc(100vh - 200px); overflow-y: auto;">
+                    <div class="chat-messages">
+                        {% for message in messages %}
+                        <div class="message mb-3 {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}" data-message-id="{{message.id}}">
+                            <div class="message-bubble p-2 rounded {% if message.sender_id == current_user.id %}bg-success text-white float-end{% else %}bg-white float-start{% endif %}"
+                                 style="max-width: 70%; position: relative;">
+                                {% if message.sender_id != current_user.id %}
+                                <small class="text-primary mb-1 d-block">{{ message.sender.username }}</small>
+                                {% endif %}
+                                {% if message.reply_to %}
+                                <div class="reply-preview mb-2 p-1 border-start border-3">
+                                    <small class="text-muted">{{ message.reply_to.sender.username }}의 메시지에 답장:</small>
+                                    <div class="text-truncate">{{ message.reply_to.message }}</div>
+                                </div>
+                                {% endif %}
+                                {% if message.file_url %}
+                                    {% if message.file_type == 'image' %}
+                                    <img src="{{ message.file_url }}" class="img-fluid mb-2" style="max-width: 300px;">
+                                    {% else %}
+                                    <a href="{{ message.file_url }}" class="btn btn-sm btn-light mb-2" download>
+                                        <i class="bi bi-file-earmark"></i> 파일 다운로드
+                                    </a>
+                                    {% endif %}
+                                {% endif %}
+                                {{ message.message }}
+                                <small class="text-{{ 'light' if message.sender_id == current_user.id else 'muted' }} d-block text-end mt-1" style="font-size: 0.7rem;">
+                                    {{ message.timestamp.strftime('%H:%M') }}
+                                    {% if message.sender_id == current_user.id %}
+                                    <i class="bi bi-check2-all"></i>
+                                    {% endif %}
+                                </small>
+                                <div class="message-actions position-absolute" style="top: 5px; right: 5px;">
+                                    <button class="btn btn-link btn-sm p-0 text-{{ 'light' if message.sender_id == current_user.id else 'dark' }}"
+                                            onclick="replyToMessage({{ message.id }}, '{{ message.sender.username }}')">
+                                        <i class="bi bi-reply"></i>
+                                    </button>
+                                    {% if current_user.is_admin %}
+                                    <button class="btn btn-link btn-sm p-0 text-{{ 'light' if message.sender_id == current_user.id else 'dark' }}"
+                                            onclick="showMessageReads({{ message.id }})">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% if current_user.is_admin or message.sender_id == current_user.id %}
+                                    <form method="POST" action="{{ url_for('delete_message', message_id=message.id) }}" class="message-delete-form d-inline">
+                                        <button type="submit" class="btn btn-link btn-sm p-0 text-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="clearfix"></div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <div id="replyPreview" class="d-none mb-2 p-2 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted">답장 대상: </small>
+                                <span id="replyToUsername"></span>
+                            </div>
+                            <button class="btn btn-link btn-sm p-0" onclick="cancelReply()">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <form id="messageForm" class="mb-0">
+                        <div class="input-group">
+                            <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('fileInput').click()">
+                                <i class="bi bi-paperclip"></i>
+                            </button>
+                            <input type="text" class="form-control" name="message" id="messageInput" 
+                                   placeholder="메시지를 입력하세요..." required>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <input type="file" id="fileInput" style="display: none;" accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx">
+                </div>
+            </div>
+        </div>
+
+        <!-- 접속자 목록 -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">접속자 목록</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for user in active_users %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center" data-user-id="{{user.id}}">
+                            <div>
+                                <span class="user-status-dot bg-success"></span>
+                                {{ user.username }}
+                            </div>
+                            {% if user.is_admin %}
+                            <span class="badge bg-danger">관리자</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 메시지 검색 모달 -->
+<div class="modal fade" id="searchModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">메시지 검색</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="searchInput" placeholder="검색어를 입력하세요...">
+                    <button class="btn btn-success" type="button" onclick="searchMessages()">
+                        <i class="bi bi-search"></i> 검색
+                    </button>
+                </div>
+                <div id="searchResults" class="list-group">
+                    <!-- 검색 결과가 여기에 표시됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 방 설정 모달 (관리자 전용) -->
+{% if current_user.is_admin %}
+<div class="modal fade" id="roomSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">채팅방 설정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6>채팅방 관리</h6>
+                    <button class="btn btn-danger btn-sm" onclick="clearAllMessages()">
+                        전체 메시지 삭제
+                    </button>
+                </div>
+                <div class="mb-3">
+                    <h6>공지사항 관리</h6>
+                    <form id="noticeForm" onsubmit="createNotice(event)">
+                        <div class="mb-2">
+                            <input type="text" class="form-control" name="title" placeholder="공지 제목" required>
+                        </div>
+                        <div class="mb-2">
+                            <textarea class="form-control" name="content" placeholder="공지 내용" required></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_pinned" id="noticePinned">
+                                <label class="form-check-label" for="noticePinned">
+                                    상단에 고정
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">만료 시간 (선택사항)</label>
+                            <input type="datetime-local" class="form-control" name="expires_at">
+                        </div>
+                        <button type="submit" class="btn btn-primary">공지 등록</button>
+                    </form>
+                </div>
+                <div class="mb-3">
+                    <h6>투표 관리</h6>
+                    <form id="pollForm" onsubmit="createPoll(event)">
+                        <div class="mb-2">
+                            <input type="text" class="form-control" name="question" placeholder="투표 질문" required>
+                        </div>
+                        <div id="pollOptions" class="mb-2">
+                            <input type="text" class="form-control mb-2" name="options[]" placeholder="옵션 1" required>
+                            <input type="text" class="form-control mb-2" name="options[]" placeholder="옵션 2" required>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary mb-2" onclick="addPollOption()">
+                            옵션 추가
+                        </button>
+                        <div class="mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_multiple" id="pollMultiple">
+                                <label class="form-check-label" for="pollMultiple">
+                                    복수 선택 가능
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_anonymous" id="pollAnonymous">
+                                <label class="form-check-label" for="pollAnonymous">
+                                    익명 투표
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">종료 시간 (선택사항)</label>
+                            <input type="datetime-local" class="form-control" name="ends_at">
+                        </div>
+                        <button type="submit" class="btn btn-primary">투표 생성</button>
+                    </form>
+                </div>
+                <div class="mb-3">
+                    <h6>사용자 관리</h6>
+                    <div class="list-group">
+                        {% for user in active_users %}
+                        {% if not user.is_admin %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ user.username }}
+                            <button class="btn btn-warning btn-sm" onclick="muteUser('{{ user.username }}')">
+                                채팅 금지
+                            </button>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 통계 모달 -->
+<div class="modal fade" id="statisticsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">채팅방 통계</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>일별 통계</h6>
+                        <canvas id="dailyStatsChart"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>시간대별 통계</h6>
+                        <canvas id="hourlyStatsChart"></canvas>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h6>사용자별 통계</h6>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>사용자</th>
+                                    <th>메시지 수</th>
+                                    <th>총 글자 수</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userStatsTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 메시지 읽음 확인 모달 -->
+<div class="modal fade" id="messageReadsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">메시지 읽음 확인</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="list-group" id="messageReadsList">
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Chart.js 추가 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// 기존 JavaScript 코드는 유지하면서 아래 코드를 추가
+
+let dailyStatsChart = null;
+let hourlyStatsChart = null;
+
+// 통계 데이터 로드 및 차트 생성
+async function loadStatistics() {
+    const response = await fetch('/chat/statistics');
+    const data = await response.json();
+
+    // 일별 통계 차트
+    const dailyCtx = document.getElementById('dailyStatsChart').getContext('2d');
+    if (dailyStatsChart) dailyStatsChart.destroy();
+    dailyStatsChart = new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: data.daily_stats.map(stat => stat.date),
+            datasets: [{
+                label: '메시지 수',
+                data: data.daily_stats.map(stat => stat.messages),
+                borderColor: '#28a745',
+                tension: 0.1
+            }, {
+                label: '활성 사용자',
+                data: data.daily_stats.map(stat => stat.active_users),
+                borderColor: '#007bff',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // 시간대별 통계 차트
+    const hourlyCtx = document.getElementById('hourlyStatsChart').getContext('2d');
+    if (hourlyStatsChart) hourlyStatsChart.destroy();
+    hourlyStatsChart = new Chart(hourlyCtx, {
+        type: 'bar',
+        data: {
+            labels: data.hourly_stats.map(stat => `${stat.hour}시`),
+            datasets: [{
+                label: '메시지 수',
+                data: data.hourly_stats.map(stat => stat.messages),
+                backgroundColor: '#28a745'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // 사용자별 통계 테이블
+    const userStatsTable = document.getElementById('userStatsTable');
+    userStatsTable.innerHTML = data.user_stats.map(stat => `
+        <tr>
+            <td>${stat.username}</td>
+            <td>${stat.messages}</td>
+            <td>${stat.characters}</td>
+        </tr>
+    `).join('');
+}
+
+// 통계 모달이 열릴 때 데이터 로드
+document.getElementById('statisticsModal').addEventListener('shown.bs.modal', loadStatistics);
+
+// 공지사항 생성
+async function createNotice(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+
+    const response = await fetch('/notice/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            title: formData.get('title'),
+            content: formData.get('content'),
+            is_pinned: formData.get('is_pinned') === 'on',
+            expires_at: formData.get('expires_at') || null
+        })
+    });
+
+    if (response.ok) {
+        location.reload();
+    }
+}
+
+// 투표 옵션 추가
+function addPollOption() {
+    const pollOptions = document.getElementById('pollOptions');
+    const newOption = document.createElement('input');
+    newOption.type = 'text';
+    newOption.className = 'form-control mb-2';
+    newOption.name = 'options[]';
+    newOption.placeholder = `옵션 ${pollOptions.children.length + 1}`;
+    newOption.required = true;
+    pollOptions.appendChild(newOption);
+}
+
+// 투표 생성
+async function createPoll(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+
+    const response = await fetch('/poll/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            question: formData.get('question'),
+            options: Array.from(formData.getAll('options[]')),
+            is_multiple: formData.get('is_multiple') === 'on',
+            is_anonymous: formData.get('is_anonymous') === 'on',
+            ends_at: formData.get('ends_at') || null
+        })
+    });
+
+    if (response.ok) {
+        location.reload();
+    }
+}
+
+// 투표하기
+async function votePoll(event, pollId) {
+    event.preventDefault();
+    const form = event.target;
+    const options = form.querySelectorAll('input[name="poll_option"]:checked');
+    const optionIds = Array.from(options).map(opt => parseInt(opt.value));
+
+    if (optionIds.length === 0) {
+        alert('최소 하나의 옵션을 선택해주세요.');
+        return;
+    }
+
+    const response = await fetch(`/poll/${pollId}/vote`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            option_ids: optionIds
+        })
+    });
+
+    if (response.ok) {
+        const data = await response.json();
+        showPollResults(pollId, data.results);
+    }
+}
+
+// 투표 결과 표시
+function showPollResults(pollId, results) {
+    const resultsContainer = document.getElementById(`poll_results_${pollId}`);
+    let html = '<h6>투표 결과:</h6>';
+
+    Object.values(results).forEach(result => {
+        const percentage = (result.votes / Object.values(results).reduce((sum, r) => sum + r.votes, 0) * 100).toFixed(1);
+        html += `
+            <div class="mb-2">
+                <div>${result.content}</div>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: ${percentage}%"
+                         aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100">
+                        ${result.votes}표 (${percentage}%)
+                    </div>
+                </div>
+                ${result.voters ? `<small class="text-muted">투표자: ${result.voters.join(', ')}</small>` : ''}
+            </div>
+        `;
+    });
+
+    resultsContainer.innerHTML = html;
+}
+
+// 투표 삭제
+async function deletePoll(pollId) {
+    if (!confirm('정말 이 투표를 삭제하시겠습니까?')) return;
+
+    const response = await fetch(`/poll/${pollId}/delete`, {
+        method: 'POST'
+    });
+
+    if (response.ok) {
+        location.reload();
+    }
+}
+
+// 메시지 읽음 확인
+async function showMessageReads(messageId) {
+    const response = await fetch(`/message_reads/${messageId}`);
+    const reads = await response.json();
+
+    const list = document.getElementById('messageReadsList');
+    list.innerHTML = reads.map(read => `
+        <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+                <span>${read.username}</span>
+                <small class="text-muted">${read.read_at}</small>
+            </div>
+        </li>
+    `).join('');
+
+    const modal = new bootstrap.Modal(document.getElementById('messageReadsModal'));
+    modal.show();
+}
+
+// Socket.io 이벤트 리스너 추가
+socket.on('new_notice', function(data) {
+    if (data.is_pinned) {
+        location.reload();
+    }
+});
+
+socket.on('notice_deleted', function(data) {
+    location.reload();
+});
+
+socket.on('new_poll', function(data) {
+    location.reload();
+});
+
+socket.on('poll_updated', function(data) {
+    showPollResults(data.poll_id, data.results);
+});
+
+socket.on('poll_deleted', function(data) {
+    location.reload();
+});
+</script>
+
+<style>
+/* 기존 스타일 유지 */
+
+/* 투표 관련 스타일 */
+.progress {
+    height: 20px;
+    background-color: #f5f5f5;
+    margin: 5px 0;
+}
+
+.progress-bar {
+    background-color: #28a745;
+    color: white;
+    text-align: center;
+    line-height: 20px;
+    white-space: nowrap;
+}
+
+/* 통계 차트 스타일 */
+.chart-container {
+    position: relative;
+    margin: auto;
+    height: 300px;
+}
+</style>
+{% endblock %}

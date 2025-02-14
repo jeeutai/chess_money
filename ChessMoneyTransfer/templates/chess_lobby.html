@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">체스 게임 로비</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Create New Game -->
+                    <form method="POST" action="{{ url_for('new_chess_game') }}" class="mb-4">
+                        <div class="mb-3">
+                            <label for="opponent_id" class="form-label">상대 선택</label>
+                            <select class="form-select" id="opponent_id" name="opponent_id">
+                                <option value="">상대를 선택하세요</option>
+                                {% for user in other_users %}
+                                <option value="{{ user.id }}">
+                                    <span style="color: {{ user.profile_color }}">{{ user.profile_piece }}</span>
+                                    {{ user.username }} (ELO: {{ user.elo_rating }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="color_preference" class="form-label">색상 선택</label>
+                            <select class="form-select" id="color_preference" name="color_preference">
+                                <option value="random">랜덤</option>
+                                <option value="white">백</option>
+                                <option value="black">흑</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="time_control" class="form-label">시간 제한 (분)</label>
+                            <select class="form-select" id="time_control" name="time_control">
+                                <option value="300">5분</option>
+                                <option value="600" selected>10분</option>
+                                <option value="900">15분</option>
+                                <option value="1800">30분</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success">새 게임 시작</button>
+                    </form>
+
+                    <!-- Active Games -->
+                    <h5 class="mb-3">진행 중인 게임</h5>
+                    {% if active_games %}
+                    <div class="list-group">
+                        {% for game in active_games %}
+                        <a href="{{ url_for('play_chess', game_id=game.id) }}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span style="color: {{ game.white_player.profile_color }}">
+                                        {{ game.white_player.profile_piece }} {{ game.white_player.username }}
+                                    </span>
+                                    vs
+                                    <span style="color: {{ game.black_player.profile_color }}">
+                                        {{ game.black_player.profile_piece }} {{ game.black_player.username }}
+                                    </span>
+                                </div>
+                                <small class="text-muted">
+                                    {{ game.last_move_at.strftime('%Y-%m-%d %H:%M') }}
+                                </small>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">진행 중인 게임이 없습니다.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Rankings -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">체스 랭킹</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>순위</th>
+                                    <th>플레이어</th>
+                                    <th>ELO</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in other_users|sort(attribute='elo_rating', reverse=True) %}
+                                <tr class="{% if user.id == current_user.id %}table-success{% endif %}">
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <span style="color: {{ user.profile_color }}">
+                                            {{ user.profile_piece }} {{ user.username }}
+                                        </span>
+                                    </td>
+                                    <td>{{ user.elo_rating }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

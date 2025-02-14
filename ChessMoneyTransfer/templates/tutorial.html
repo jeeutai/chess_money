@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h4>{{ tutorial.title }}</h4>
+                    <div class="mt-2">
+                        <span class="badge bg-light text-dark">난이도: {{ tutorial.difficulty }}</span>
+                        <span class="badge bg-light text-dark">카테고리: {{ tutorial.category }}</span>
+                        <span class="badge bg-light text-dark">조회수: {{ tutorial.views }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {{ tutorial.content | safe | nl2br }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h4>체스판</h4>
+                </div>
+                <div class="card-body">
+                    <div id="tutorial-board" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4>다른 튜토리얼</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for other in related_tutorials %}
+                        <a href="{{ url_for('tutorial', tutorial_id=other.id) }}" class="list-group-item list-group-item-action {% if other.id == tutorial.id %}active{% endif %}">
+                            <h6 class="mb-1">{{ other.title }}</h6>
+                            <small>난이도: {{ other.difficulty }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script>
+var board = Chessboard('tutorial-board', {
+    position: '{{ tutorial.position_fen }}',
+    showNotation: true
+});
+$(window).resize(function() {
+    board.resize();
+});
+</script>
+{% endblock %}

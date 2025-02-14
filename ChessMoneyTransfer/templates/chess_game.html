@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Chess Board -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0">
+                                <span style="color: {{ game.white_player.profile_color }}">
+                                    {{ game.white_player.profile_piece }} {{ game.white_player.username }}
+                                </span>
+                                <span id="white-timer" class="badge bg-light text-dark">
+                                    {{ '%d:%02d'|format(game.white_time_left//60, game.white_time_left%60) }}
+                                </span>
+                            </h4>
+                        </div>
+                        <div>
+                            <span class="badge bg-light text-dark">
+                                White ELO: {{ game.white_player.elo_rating }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div>
+                            <h4 class="mb-0">
+                                <span style="color: {{ game.black_player.profile_color }}">
+                                    {{ game.black_player.profile_piece }} {{ game.black_player.username }}
+                                </span>
+                                <span id="black-timer" class="badge bg-light text-dark">
+                                    {{ '%d:%02d'|format(game.black_time_left//60, game.black_time_left%60) }}
+                                </span>
+                            </h4>
+                        </div>
+                        <div>
+                            <span class="badge bg-light text-dark">
+                                Black ELO: {{ game.black_player.elo_rating }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body text-center">
+                    <div id="chess-board" style="width: 600px; margin: 0 auto;"></div>
+                    <div class="mt-3">
+                        <!-- Game Controls -->
+                        <button id="resign-btn" class="btn btn-danger">기권</button>
+                        <button id="draw-btn" class="btn btn-warning">무승부 제안</button>
+                        <div id="draw-offer-controls" style="display: none;">
+                            <button id="accept-draw-btn" class="btn btn-success">무승부 수락</button>
+                            <button id="decline-draw-btn" class="btn btn-danger">무승부 거절</button>
+                        </div>
+                        <!-- Game Analysis Controls -->
+                        <div id="analysis-controls" style="display: {{ 'block' if game.status == 'completed' else 'none' }}" class="mt-3">
+                            <a href="{{ url_for('analyze_game', game_id=game.id) }}" class="btn btn-info">게임 분석</a>
+                            <a href="{{ url_for('game_replay', game_id=game.id) }}" class="btn btn-secondary">리플레이</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Chat -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">게임 채팅</h4>
+                </div>
+                <div class="card-body">
+                    <div id="chat-messages" class="mb-3" style="height: 400px; overflow-y: auto;">
+                        {% for chat in chat_messages %}
+                        <div class="chat-message">
+                            <small class="text-muted">{{ chat.timestamp.strftime('%H:%M:%S') }}</small>
+                            <strong>{{ chat.sender.username }}:</strong>
+                            {{ chat.message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <form id="chat-form" class="mt-3">
+                        <div class="input-group">
+                            <input type="text" id="chat-input" class="form-control" placeholder="메시지 입력...">
+                            <button type="submit" class="btn btn-success">전송</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tutorial Recommendations -->
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">추천 튜토리얼</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for tutorial in recommended_tutorials %}
+                        <a href="{{ url_for('view_tutorial', tutorial_id=tutorial.id) }}" class="list-group-item list-group-item-action">
+                            <h6 class="mb-1">{{ tutorial.title }}</h6>
+                            <small>난이도: {{ tutorial.difficulty }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    <a href="{{ url_for('tutorials') }}" class="btn btn-outline-info mt-3">모든 튜토리얼 보기</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Required Scripts -->
+<link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+<script>
+const gameId = {{ game.id }};
+const currentUserId = {{ current_user.id }};
+const isWhitePlayer = {{ 'true' if current_user.id == game.white_player_id else 'false' }};
+let board = null;
+let game = new Chess('{{ game.fen }}');
+let whiteTimeLeft = {{ game.white_time_left }};
+let blackTimeLeft = {{ game.black_time_left }};
+let timerInterval;
+
+// Socket.IO setup
+const socket = io();
+socket.emit('join_game', { game_id: gameId });
+
+function updateTimer() {
+    if (game.game_over()) return;
+
+    if (game.turn() === 'w') {
+        whiteTimeLeft--;
+        if (whiteTimeLeft <= 0) {
+            clearInterval(timerInterval);
+            socket.emit('game_over', { reason: 'time', winner_id: (isWhitePlayer ? null : currentUserId) });
+            return;
+        }
+    } else {
+        blackTimeLeft--;
+        if (blackTimeLeft <= 0) {
+            clearInterval(timerInterval);
+            socket.emit('game_over', { reason: 'time', winner_id: (isWhitePlayer ? currentUserId : null) });
+            return;
+        }
+    }
+
+    document.getElementById('white-timer').textContent = 
+        `${Math.floor(whiteTimeLeft/60)}:${(whiteTimeLeft%60).toString().padStart(2, '0')}`;
+    document.getElementById('black-timer').textContent = 
+        `${Math.floor(blackTimeLeft/60)}:${(blackTimeLeft%60).toString().padStart(2, '0')}`;
+}
+
+// Start the timer
+timerInterval = setInterval(updateTimer, 1000);
+
+function onDragStart(source, piece, position, orientation) {
+    if (game.game_over()) return false;
+
+    // Allow moves only for the current player's turn
+    if ((game.turn() === 'w' && !isWhitePlayer) ||
+        (game.turn() === 'b' && isWhitePlayer)) {
+        return false;
+    }
+
+    // Allow moves only for the current player's pieces
+    if ((isWhitePlayer && piece.search(/^b/) !== -1) ||
+        (!isWhitePlayer && piece.search(/^w/) !== -1)) {
+        return false;
+    }
+}
+
+function onDrop(source, target) {
+    const move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q' // Always promote to queen for simplicity
+    });
+
+    if (move === null) return 'snapback';
+
+    socket.emit('make_move', {
+        game_id: gameId,
+        move: move.from + move.to + (move.promotion || '')
+    });
+}
+
+function onSnapEnd() {
+    board.position(game.fen());
+}
+
+// Initialize the chess board
+const config = {
+    position: '{{ game.fen }}',
+    orientation: isWhitePlayer ? 'white' : 'black',
+    draggable: true,
+    onDragStart: onDragStart,
+    onDrop: onDrop,
+    onSnapEnd: onSnapEnd,
+    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+};
+
+board = Chessboard('chess-board', config);
+
+// Socket.IO event handlers
+socket.on('move_made', function(data) {
+    game.move({
+        from: data.move.substring(0, 2),
+        to: data.move.substring(2, 4),
+        promotion: data.move.substring(4) || undefined
+    });
+    board.position(game.fen());
+    whiteTimeLeft = data.white_time;
+    blackTimeLeft = data.black_time;
+});
+
+socket.on('game_over', function(data) {
+    clearInterval(timerInterval);
+    let message = '게임 종료! ';
+    if (data.reason === 'resignation') {
+        message += data.winner_id === currentUserId ? '상대방이 기권했습니다!' : '기권했습니다.';
+    } else if (data.reason === 'draw_accepted') {
+        message += '무승부로 합의했습니다.';
+    } else if (data.reason === 'time') {
+        message += data.winner_id === currentUserId ? '상대방이 시간 초과로 패배했습니다!' : '시간 초과로 패배했습니다.';
+    } else if (data.winner_id) {
+        message += data.winner_id === currentUserId ? '승리!' : '패배...';
+    } else {
+        message += '무승부';
+    }
+    alert(message);
+
+    // Show rating changes
+    const whiteChange = data.white_new_rating - {{ game.white_player.elo_rating }};
+    const blackChange = data.black_new_rating - {{ game.black_player.elo_rating }};
+    alert(`레이팅 변동:\n백: ${whiteChange > 0 ? '+' : ''}${whiteChange}\n흑: ${blackChange > 0 ? '+' : ''}${blackChange}`);
+
+    // Show analysis controls after game is over
+    document.getElementById('analysis-controls').style.display = 'block';
+});
+
+socket.on('draw_offered', function(data) {
+    if (data.offerer_id !== currentUserId) {
+        alert('상대방이 무승부를 제안했습니다.');
+        document.getElementById('draw-offer-controls').style.display = 'block';
+        document.getElementById('draw-btn').style.display = 'none';
+    }
+});
+
+socket.on('draw_declined', function(data) {
+    if (data.offerer_id === currentUserId) {
+        alert('상대방이 무승부 제안을 거절했습니다.');
+    }
+    document.getElementById('draw-offer-controls').style.display = 'none';
+    document.getElementById('draw-btn').style.display = 'inline-block';
+});
+
+// Game control buttons
+document.getElementById('resign-btn').addEventListener('click', function() {
+    if (confirm('정말 기권하시겠습니까?')) {
+        socket.emit('resign', { game_id: gameId });
+    }
+});
+
+document.getElementById('draw-btn').addEventListener('click', function() {
+    socket.emit('offer_draw', { game_id: gameId });
+    alert('무승부를 제안했습니다.');
+});
+
+document.getElementById('accept-draw-btn').addEventListener('click', function() {
+    socket.emit('accept_draw', { game_id: gameId });
+});
+
+document.getElementById('decline-draw-btn').addEventListener('click', function() {
+    socket.emit('decline_draw', { game_id: gameId });
+    document.getElementById('draw-offer-controls').style.display = 'none';
+    document.getElementById('draw-btn').style.display = 'inline-block';
+});
+
+// Chat functionality
+socket.on('chat_message', function(data) {
+    const chatMessages = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'chat-message';
+    messageDiv.innerHTML = `
+        <small class="text-muted">${data.timestamp}</small>
+        <strong>${data.sender}:</strong>
+        ${data.message}
+    `;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+});
+
+document.getElementById('chat-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+
+    if (message) {
+        socket.emit('game_chat', {
+            game_id: gameId,
+            message: message
+        });
+        input.value = '';
+    }
+});
+
+// Keep chat scrolled to bottom
+const chatMessages = document.getElementById('chat-messages');
+chatMessages.scrollTop = chatMessages.scrollHeight;
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    board.resize();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">월급 자동 지급 설정</h4>
+            <div>
+                <a href="{{ url_for('users') }}" class="btn btn-light">회원 관리로 돌아가기</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- 월급 예약 추가 폼 -->
+            <form method="POST" action="{{ url_for('add_payment_schedule') }}" class="mb-4">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <input type="number" class="form-control" name="amount" placeholder="지급할 금액" required>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" name="schedule_day" required>
+                            <option value="">지급일 선택</option>
+                            {% for day in range(1, 32) %}
+                            <option value="{{ day }}">{{ day }}일</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-success w-100">예약 추가</button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- 예약된 월급 목록 -->
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>지급일</th>
+                            <th>금액</th>
+                            <th>상태</th>
+                            <th>설정일</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in scheduled_payments %}
+                        <tr>
+                            <td>매월 {{ payment.schedule_day }}일</td>
+                            <td>{{ payment.amount }}</td>
+                            <td>
+                                <span class="badge {% if payment.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {{ '활성' if payment.is_active else '비활성' }}
+                                </span>
+                            </td>
+                            <td>{{ payment.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('toggle_payment_schedule', payment_id=payment.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm {% if payment.is_active %}btn-warning{% else %}btn-success{% endif %}">
+                                        {{ '비활성화' if payment.is_active else '활성화' }}
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('delete_payment_schedule', payment_id=payment.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-danger btn-sm">삭제</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

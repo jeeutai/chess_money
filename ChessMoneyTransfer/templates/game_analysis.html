@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h4><i class="fas fa-chess-board"></i> 게임 분석 결과</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5><i class="fas fa-info-circle"></i> 게임 정보</h5>
+                        <p><strong>백: </strong>{{ analysis.game.white_player.username }} ({{ analysis.game.white_player.elo_rating }})</p>
+                        <p><strong>흑: </strong>{{ analysis.game.black_player.username }} ({{ analysis.game.black_player.elo_rating }})</p>
+                        <p><strong>날짜: </strong>{{ analysis.game.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5><i class="fas fa-robot"></i> AI 분석</h5>
+                        <div class="analysis-text p-3 bg-light rounded">
+                            {{ analysis.analysis_text | safe | nl2br }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5><i class="fas fa-chart-line"></i> 통계</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h3 class="text-success">{{ analysis.strength_score }}/100</h3>
+                                        <p class="text-muted">게임 실력 점수</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h3 class="text-danger">{{ analysis.mistakes_count }}</h3>
+                                        <p class="text-muted">실수 횟수</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4><i class="fas fa-graduation-cap"></i> 추천 튜토리얼</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for tutorial in recommended_tutorials %}
+                        <a href="{{ url_for('tutorial', tutorial_id=tutorial.id) }}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ tutorial.title }}</h6>
+                                <span class="badge bg-success">{{ tutorial.category }}</span>
+                            </div>
+                            <small class="text-muted">난이도: {{ tutorial.difficulty }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

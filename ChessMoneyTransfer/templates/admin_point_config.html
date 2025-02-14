@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0">포인트 설정</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="points_per_chess_money" class="form-label">포인트-체스머니 환율</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="points_per_chess_money" name="points_per_chess_money"
+                               value="{{ config.points_per_chess_money }}" min="1" required>
+                        <span class="input-group-text">포인트 = 1 체스머니</span>
+                    </div>
+                    <div class="form-text">1체스머니로 환전하는데 필요한 포인트 수를 설정합니다.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="attendance_points" class="form-label">출석체크 보상</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="attendance_points" name="attendance_points"
+                               value="{{ config.attendance_points }}" min="1" required>
+                        <span class="input-group-text">포인트</span>
+                    </div>
+                    <div class="form-text">출석체크 시 지급되는 포인트를 설정합니다.</div>
+                </div>
+                <button type="submit" class="btn btn-success">설정 저장</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

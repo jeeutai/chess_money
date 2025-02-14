@@ -1,0 +1,4 @@
+id,username,password_hash,balance,points,is_admin,created_at,last_attendance,profile_piece,profile_color,attendance_streak,last_reward_check,elo_rating
+1,admin,scrypt:32768:8:1$K79ulRBGapA3UnhA$55d977cac1eb6f6c52d7a312de93a7009696fcc5f8dc10cca38f612f42e7dcb9426edef6ba0a2011c8b6111a5b8cbaeb3676c769cc3ff50e9be06fc754904e95,inf,0,True,2025-02-11T12:58:28.652085,,♙,#000000,0,,1500
+2,이재용,scrypt:32768:8:1$QSQ4YMeS0wGiyPJp$f8ad7f9ffe012d5dc5c9ab8666001cf388db3b0f9d68e42ea3db028bedd60717507c8947702b081484b95005ed6caa90d9f9f8902831032c2c380678d9034a12,inf,0,True,2025-02-11T12:58:43.329088,,♙,#000000,0,,1500
+3,조성우,scrypt:32768:8:1$c4y2NlKaNd27umqA$5d07b0a30bcf035e9bc48a4313579cb556081788c5021ee216683850bc39b5bd6b550fd97cc20437f08fa61eb9762596f97f009d0a90ec8d3dcf185c6505c6cb,inf,0,True,2025-02-11T12:58:58.437380,,♙,#000000,0,,1500

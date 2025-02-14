@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h4>계정 정보</h4>
+            </div>
+            <div class="card-body">
+                <p><strong>잔액:</strong> {% if current_user.is_admin %}∞{% else %}{{ current_user.balance }}{% endif %} 체스머니</p>
+                <p><strong>계정 유형:</strong> {{ '관리자' if current_user.is_admin else '일반 회원' }}</p>
+                <p><strong>ELO 레이팅:</strong> {{ current_user.elo_rating }}</p>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('chess_lobby') }}" class="btn btn-success">
+                        <i class="fas fa-chess"></i> 체스 게임
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% if not current_user.is_admin %}
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h4>송금하기</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('transfer') }}">
+                    <div class="mb-3">
+                        <label for="receiver" class="form-label">받는 사람 아이디</label>
+                        <input type="text" class="form-control" id="receiver" name="receiver" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">송금액</label>
+                        <input type="number" class="form-control" id="amount" name="amount" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">송금하기</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if current_user.is_admin %}
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h4>관리자 메뉴</h4>
+            </div>
+            <div class="card-body">
+                <h5>회원 추가</h5>
+                <form method="POST" action="{{ url_for('admin_add_user') }}" class="mb-3">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" name="username" placeholder="아이디" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" class="form-control" name="password" placeholder="비밀번호" required>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin">
+                        <label class="form-check-label" for="is_admin">관리자 권한 부여</label>
+                    </div>
+                    <button type="submit" class="btn btn-success">회원 추가</button>
+                </form>
+
+                <h5>회원 탈퇴</h5>
+                <form method="POST" action="{{ url_for('admin_remove_user') }}" class="mb-3">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" name="username" placeholder="아이디" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger">회원 탈퇴</button>
+                </form>
+
+                <h5>잔액 수정</h5>
+                <form method="POST" action="{{ url_for('admin_modify_balance') }}" class="mb-3">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" name="username" placeholder="아이디" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="number" class="form-control" name="balance" placeholder="새로운 잔액" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning">잔액 수정</button>
+                </form>
+
+                <h5>벌금 부과</h5>
+                <form method="POST" action="{{ url_for('admin_apply_fine') }}">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" name="username" placeholder="아이디" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="number" class="form-control" name="amount" placeholder="벌금액" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger">벌금 부과</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4>거래 내역</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>날짜</th>
+                                <th>거래 유형</th>
+                                <th>보낸 사람</th>
+                                <th>받는 사람</th>
+                                <th>금액</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>
+                                    {% if transaction.type == 'transfer' %}
+                                    송금
+                                    {% elif transaction.type == 'fine' %}
+                                    벌금
+                                    {% elif transaction.type == 'monthly' %}
+                                    월급
+                                    {% endif %}
+                                </td>
+                                <td>{{ transaction.sender.username }}</td>
+                                <td>{{ transaction.receiver.username }}</td>
+                                <td>{{ transaction.amount }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

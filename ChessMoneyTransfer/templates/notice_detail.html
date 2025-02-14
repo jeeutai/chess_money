@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    {% if notice.is_important %}
+                    <span class="badge bg-danger me-2">중요</span>
+                    {% endif %}
+                    {{ notice.title }}
+                </h4>
+                {% if current_user.is_admin %}
+                <div>
+                    <a href="{{ url_for('edit_notice', notice_id=notice.id) }}" class="btn btn-light me-2">수정</a>
+                    <form action="{{ url_for('delete_notice', notice_id=notice.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('정말로 삭제하시겠습니까?')">삭제</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <small class="text-muted">
+                    작성자: {{ notice.author.username }} | 
+                    작성일: {{ notice.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    {% if notice.updated_at != notice.created_at %}
+                    | 수정일: {{ notice.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                    {% endif %}
+                </small>
+            </div>
+            <div class="notice-content">
+                {{ notice.content | nl2br }}
+            </div>
+        </div>
+        <div class="card-footer">
+            <a href="{{ url_for('notices') }}" class="btn btn-secondary">목록으로</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
