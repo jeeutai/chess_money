@@ -1,7 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
-import sys
-sys.path.append('C:\Users\enter\Downloads\ChessMoneyTransfer\ChessMoneyTransfer')
+import sysimport sys
+sys.path.append('./ChessMoneyTransfer')  # 또는 절대 경로로 설정할 수도 있음
 from app import db
 import os
 from flask import Flask
