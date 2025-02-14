@@ -1,5 +1,10 @@
 from app import app, socketio
 import logging
+from ChessMoneyTransfer.app import app  # app.py를 임포트
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
 
 logger = logging.getLogger(__name__)
 
