@@ -5,3 +5,4 @@ psycopg2
 SQLAlchemy
 eventlet
 Flask
+Flask-SQLAlchemy
