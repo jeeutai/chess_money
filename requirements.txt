@@ -3,3 +3,4 @@ uvicorn
 gunicorn
 psycopg2
 SQLAlchemy
+eventlet
