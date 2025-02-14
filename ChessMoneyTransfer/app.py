@@ -2,7 +2,7 @@ import eventlet
 eventlet.monkey_patch()
 import sys
 sys.path.append('/path/to/directory/containing/app')
-from app import*
+from app import db
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
