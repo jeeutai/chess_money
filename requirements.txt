@@ -14,3 +14,4 @@ oauthlib
 python-socketio
 python-engineio
 uvicorn
+models
