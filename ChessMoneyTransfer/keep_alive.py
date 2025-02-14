@@ -1,15 +1,13 @@
-from flask import Flask
-from threading import Thread
+import time
+import requests
 
-app = Flask('')
+URL = "https://chessjaeguk.onrender.com"  # 여기에 Render 앱 주소 입력
 
-@app.route('/')
-def home():
-    return "Bot is online"
+while True:
+    try:
+        response = requests.get(URL)
+        print(f"서버 응답 코드: {response.status_code}")  # 응답 코드 출력
+    except Exception as e:
+        print(f"오류 발생: {e}")
 
-def run():
-    app.run(host='0.0.0.0',port=8080)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
+    time.sleep(45)  # 45초마다 요청 보내기
