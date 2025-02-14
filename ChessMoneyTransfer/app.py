@@ -1,14 +1,14 @@
 import eventlet
 eventlet.monkey_patch()
+
 import os
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_socketio import SocketIO
 import logging
-from ChessMoneyTransfer.models import models
+from ChessMoneyTransfer.models import db  # 🔥 db를 models에서 가져옴 (순환 참조 해결)
 
-# Configure logging
+# 로그 설정
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -23,36 +23,39 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_pre_ping": True,
 }
 
-def make_db():
-    db = SQLAlchemy(app)
-    login_manager = LoginManager()
-    login_manager.init_app(app)
-    login_manager.login_view = 'login'
+# 🔥 db를 Flask 앱에 연결
+db.init_app(app)
 
-# Initialize Socket.IO with eventlet
+# 로그인 관리 설정
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# Socket.IO 설정
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*", logger=True, engineio_logger=True)
 
-# Create data directory if it doesn't exist
+# 데이터 디렉토리 생성
 if not os.path.exists('data'):
     os.makedirs('data')
 
 @login_manager.user_loader
 def load_user(user_id):
-    from models import User  # Import here to avoid circular import
+    from ChessMoneyTransfer.models import User  # Import 시점 조정 (순환 참조 방지)
     return User.query.get(int(user_id))
 
+# 🔥 데이터베이스 테이블 생성
 with app.app_context():
-    from models import User, Transaction, Chat
+    from ChessMoneyTransfer.models import User, Transaction, Chat
     db.create_all()
     logger.info("Database tables created successfully")
 
-# Import routes after app is fully configured
-import routes  # noqa: E402, F401
+# ⚠️ routes는 app 설정이 끝난 후 import해야 함
+import routes  
 
-# Socket.IO event handlers
+# Socket.IO 이벤트 핸들러
 @socketio.on('message')
 def handle_message(data):
-    from models import Chat
+    from ChessMoneyTransfer.models import Chat
     from flask_login import current_user
 
     if not current_user.is_authenticated:
@@ -72,3 +75,4 @@ def handle_message(data):
         'timestamp': message.timestamp.strftime('%H:%M'),
         'message_id': message.id
     })
+
