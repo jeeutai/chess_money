@@ -1,4 +1,4 @@
-from app import app, socketio
+from app import socketio
 import logging
 from ChessMoneyTransfer.app import app  # app.py를 임포트
 
