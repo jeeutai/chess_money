@@ -1,7 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
 import sys
-sys.path.append('/path/to/directory/containing/app')
+sys.path.append('C:\Users\enter\Downloads\ChessMoneyTransfer\ChessMoneyTransfer')
 from app import db
 import os
 from flask import Flask
