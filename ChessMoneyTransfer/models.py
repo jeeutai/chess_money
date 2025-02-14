@@ -1,7 +1,10 @@
 from datetime import datetime
-from ChessMoneyTransfer.app import db
+from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+
+# 🔥 순환 참조 방지: app에서 db를 직접 가져오지 않음
+db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
