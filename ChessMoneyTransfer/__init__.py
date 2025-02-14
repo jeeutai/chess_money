@@ -1,1 +1,1 @@
-from ChessMoneyTransfer import app
+
