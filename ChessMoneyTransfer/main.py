@@ -1,4 +1,5 @@
 from app import app, socketio
+from ChessMoneyTransfer.models import *
 import logging
 from ChessMoneyTransfer.app import app  # app.py를 임포트
 
