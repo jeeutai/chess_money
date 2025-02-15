@@ -14,7 +14,7 @@ from ChessMoneyTransfer.models import db  # 🔥 db를 models에서 가져옴 (�
 app = Flask(__name__)
 
 # config.py에서 설정을 가져와서 Flask 앱에 적용
-app.config.from_object('config.Config')  # config.py의 Config 클래스를 불러와 설정 적용
+app.config.from_object('ChessMoneyTransfer.config.Config')  # config.py의 Config 클래스를 불러와 설정 적용
 
 # SQLAlchemy 초기화
 db.init_app(app)
