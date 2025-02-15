@@ -2,8 +2,8 @@ from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
-from app import app, db, socketio
-from models import User, Transaction, Chat, ChatRead, Notice, Poll, PollOption, PollVote, ChatStatistics
+from ChessMoneyTransfer.app import app, db, socketio
+from ChessMoneyTransfer.models import User, Transaction, Chat, ChatRead, Notice, Poll, PollOption, PollVote, ChatStatistics
 from datetime import datetime, timedelta, date
 from utils import save_chat_to_csv, load_chat_history
 import os
