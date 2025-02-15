@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 from ChessMoneyTransfer.app import app, db, socketio
 from ChessMoneyTransfer.models import User, Transaction, Chat, ChatRead, Notice, Poll, PollOption, PollVote, ChatStatistics
 from datetime import datetime, timedelta, date
-from utils import save_chat_to_csv, load_chat_history
+from ChessMoneyTransfer.vutils import save_chat_to_csv, load_chat_history
 import os
 import logging
 
