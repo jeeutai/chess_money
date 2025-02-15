@@ -7,6 +7,18 @@ from flask_login import LoginManager
 from flask_socketio import SocketIO
 import logging
 from ChessMoneyTransfer.models import db  # 🔥 db를 models에서 가져옴 (순환 참조 해결)
+import os
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+
+# 환경 변수에서 데이터베이스 URI를 불러와서 설정
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
+
+# SQLAlchemy 초기화
+db = SQLAlchemy(app)
+
 
 # 로그 설정
 logging.basicConfig(level=logging.DEBUG)
