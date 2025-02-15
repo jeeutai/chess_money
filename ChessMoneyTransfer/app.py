@@ -48,7 +48,7 @@ with app.app_context():
     logger.info("Database tables created successfully")
 
 # routes는 앱 설정 후에 임포트 (순환 참조 방지)
-import routes  
+from ChessMoneyTransfer import routes  
 
 # Socket.IO 이벤트 핸들러
 @socketio.on('message')
