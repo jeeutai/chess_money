@@ -1,6 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
-
+from dotenv import load_dotenv
+load_dotenv()  # .env 파일을 로드해서 환경 변수에 반영
 import os
 from flask import Flask
 from flask_login import LoginManager
